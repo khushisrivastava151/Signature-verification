@@ -1,0 +1,63 @@
+import cv2
+import numpy as np
+from skimage.metrics import structural_similarity as ssim
+from google.colab.patches import cv2_imshow  # Import cv2_imshow for displaying images in Colab
+
+# Function to preprocess the signature image
+def preprocess_signature(image_path):
+    # Read the image
+    image = cv2.imread(image_path)
+
+    # Check if image is loaded successfully
+    if image is None:
+        print(f"Error: Could not open or find the image at {image_path}")
+        return None
+
+    # Convert to grayscale
+    gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+    # Apply GaussianBlur to reduce noise
+    blurred = cv2.GaussianBlur(gray_image, (5, 5), 0)
+
+    # Threshold the image (binarization)
+    _, thresholded = cv2.threshold(blurred, 127, 255, cv2.THRESH_BINARY_INV)
+
+    return thresholded
+# Function to calculate the SSIM between two images
+def verify_signatures(image1, image2):
+    # Preprocess the signature images
+    preprocessed_image1 = preprocess_signature(image1)
+    preprocessed_image2 = preprocess_signature(image2)
+
+    # Check if images were processed correctly
+    if preprocessed_image1 is None or preprocessed_image2 is None:
+        return None
+
+    # Resize the second image to match the first image size (if needed)
+    preprocessed_image2 = cv2.resize(preprocessed_image2, (preprocessed_image1.shape[1], preprocessed_image1.shape[0]))
+
+    # Calculate SSIM between the two images
+    score, diff = ssim(preprocessed_image1, preprocessed_image2, full=True)
+
+    # Display the difference using cv2_imshow
+    diff = (diff * 255).astype("uint8")
+    cv2_imshow(diff)
+
+    return score
+
+# Main function to run the program
+if __name__ == "__main__":
+    # Ask the user for the paths to the signature images
+    signature1 = input("Enter the path for the first signature image: ")
+    signature2 = input("Enter the path for the second signature image: ")
+
+    similarity_score = verify_signatures(signature1, signature2)
+
+    if similarity_score is not None:
+        print(f"SSIM Similarity Score: {similarity_score}")
+
+        # Set a threshold for verification (you can adjust this based on testing)
+        if similarity_score > 0.95:
+            print("Signatures Match!")
+        else:
+            print("Signatures Do Not Match.")
